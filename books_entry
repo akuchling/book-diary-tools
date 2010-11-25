@@ -1,0 +1,31 @@
+#!/usr/bin/env python
+# -*-Python-*-
+# 
+# Scans all regular files in a directory and updates the corresponding
+# pickle files.
+#
+
+import sys, os
+import reviews
+
+# XXX This won't erase a .pkl file if the corresponding regular file
+# disappears.  If you rename files, be sure to delete all the pickle files.
+
+for filename in os.listdir('.'):
+    if (filename.endswith('.pkl') or filename.endswith('~') or
+	filename == 'Makefile'):
+	continue
+    if not os.path.isfile(filename):
+        continue
+
+    pkl_file = reviews.get_pickle_filename(filename)
+    if (not os.path.exists(pkl_file) or 
+	 os.path.getmtime(pkl_file) < os.path.getmtime(filename)):
+        print 'Rebuilding', filename
+        input = open(filename, 'r')
+        entry = reviews.BibEntry(filename)
+        entry.parse(input)
+        entry.write_output()
+        entry.save()
+        input.close()
+

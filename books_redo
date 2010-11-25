@@ -1,0 +1,18 @@
+#!/usr/bin/env python
+# -*-Python-*-
+# 
+# Reset the state of the HTML tree completely, erasing it and then
+# re-reading all of the review files.
+#
+
+import os, shutil
+import reviews
+
+if os.path.exists(reviews.BASE_DIR):
+    shutil.rmtree(reviews.BASE_DIR)
+
+reviews.make_dirs()
+reviews.load()
+reviews.update_indexes()
+
+
