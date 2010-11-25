@@ -5,9 +5,6 @@
 #
 
 import reviews
-reviews.load()
-
-years = {}
 
 def print_stats (year):
     ylist = years[year]
@@ -19,28 +16,36 @@ def print_stats (year):
     print 'Non-fiction titles:', len(ylist)-fict
     print
 
-cur_year = None
-for rev_date, title, entry in reviews.sort_by_chron():
-    if cur_year is None or not entry.review_date.startswith(cur_year):
-	cur_year = entry.review_date[:4]
-	print cur_year
 
-    L = years.setdefault(cur_year, [])
-    L.append(entry)
-    
-    if entry.fields.get('*'):
-        authors = entry.fields.get('A')
-        def flip (a):
-            L = a.split(',', 1)
-	    if len(L) == 2:
-                a = L[1] + ' ' + L[0]
-            return a
-	s = '<cite>' + entry.link() + '</cite>'
-        if authors is not None:
-            authors = [flip(a) for a in authors]
-            s += ", " + (', '.join(authors))
-        print s + ":"
+if __name__ == '__main__':
+    reviews.load()
 
-for year in sorted(years.keys()):
-    print_stats(year)
+    years = {}
+    cur_year = None
+    for rev_date, title, entry in reviews.sort_by_chron():
+        if entry.review_date is None:
+            print >>sys.stderr, ('Entry for %s lacks a reading date'
+                                 % entry.fields.get('T'))
+            continue
+        if cur_year is None or not entry.review_date.startswith(cur_year):
+            cur_year = entry.review_date[:4]
+            print cur_year
 
+        L = years.setdefault(cur_year, [])
+        L.append(entry)
+
+        if entry.fields.get('*'):
+            authors = entry.fields.get('A')
+            def flip (a):
+                L = a.split(',', 1)
+                if len(L) == 2:
+                    a = L[1] + ' ' + L[0]
+                return a
+            s = '<cite>' + entry.link() + '</cite>'
+            if authors is not None:
+                authors = [flip(a) for a in authors]
+                s += ", " + (', '.join(authors))
+            print s + ":"
+
+    for year in sorted(years.keys()):
+        print_stats(year)
