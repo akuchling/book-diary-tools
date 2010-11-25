@@ -1,9 +1,12 @@
 #!/usr/bin/env python
 # -*-Python-*-
-# 
-# Scans all regular files in a directory and updates the corresponding
-# pickle files.
-#
+
+""" 
+
+Script: Scans all regular files in a directory and updates the
+corresponding pickle files.
+
+"""
 
 import sys, os
 import reviews
@@ -21,11 +24,16 @@ for filename in os.listdir('.'):
     pkl_file = reviews.get_pickle_filename(filename)
     if (not os.path.exists(pkl_file) or 
 	 os.path.getmtime(pkl_file) < os.path.getmtime(filename)):
-        print 'Rebuilding', filename
         input = open(filename, 'r')
         entry = reviews.BibEntry(filename)
-        entry.parse(input)
-        entry.write_output()
-        entry.save()
+        try:
+            entry.parse(input)
+        except RuntimeError:
+            print 'Skipping', filename
+        else:
+            print 'Updating', filename
+            entry.write_output()
+            entry.save()
+        
         input.close()
 
