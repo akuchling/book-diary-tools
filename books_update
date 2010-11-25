@@ -7,5 +7,5 @@
 import sys
 import reviews
 
-reviews.load()
-reviews.update_indexes()
+if __name__ == '__main__':
+    reviews.load()
