@@ -5,14 +5,11 @@
 # re-reading all of the review files.
 #
 
-import os, shutil
 import reviews
 
-if os.path.exists(reviews.BASE_DIR):
-    shutil.rmtree(reviews.BASE_DIR)
-
-reviews.make_dirs()
-reviews.load()
-reviews.update_indexes()
+if __name__ == '__main__':
+    reviews.load()
+    reviews.delete_all_posts()
+    reviews.update_all_posts()
 
 
