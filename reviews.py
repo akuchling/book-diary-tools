@@ -1,6 +1,6 @@
 import os, re, cPickle, string, time
-import cgi, shutil, datetime
-
+import cgi
+import xmlrpclib
 import rst_html
 
 # Filename for the pickled indexes
@@ -10,26 +10,11 @@ INDEX_FILENAME = os.path.join(HOME_DIR, 'files/books/index.pkl')
 # Directory holding the review source files
 SRC_DIR=os.path.join(HOME_DIR, 'files/books/s/')
 
-# Directory for the HTML output 
-BASE_DIR=os.path.join(HOME_DIR, 'files/www/sites/amk.ca/books/')
-BASE_URL='/books'
+# Configuration for the posting mechanism
+XMLRPC_SERVER = 'http://books.amk.ca/xmlrpc.php'
+WEBLOG_NAME = 'Books'
+WEBLOG_USER = 'amk'
 
-# Names of generated files
-TITLE = BASE_DIR + 'titles.ht'
-SUBJECT = BASE_DIR + 'subjects.ht'
-AUTHOR = BASE_DIR + 'authors.ht'
-INDEX = BASE_DIR + 'index.ht'
-RSS = BASE_DIR + 'index.rss'
-
-# Still to do
-CHRON = BASE_DIR + 'chron.ht'
-SCHRON = BASE_DIR + 'full-chron.ht'
-BEST = BASE_DIR + 'best.ht'
-GOOD = BASE_DIR + 'good.ht'
-REVIEW_DIR = BASE_DIR + 'h/'
-SUBJECT_DIR = BASE_DIR + 's/'
-AUTHOR_DIR = BASE_DIR + 'a/'
-TITLE_DIR = BASE_DIR + 't/'
 
 abbrevs = { 'A': 'Author',
             'C': 'City',
@@ -60,28 +45,6 @@ preferred_order = ['@', 'T', 'S', 'A', 'R', 'J', 'V',
                    'N', 'E', 'L', 'M', 'F', 'Q', 
                    'I', 'C', 'D', 'G', 'P', 
                    'U', 'K', 'Y', 'W', '*']
-
-def make_dirs ():
-    for dir in [BASE_DIR, SUBJECT_DIR, REVIEW_DIR, AUTHOR_DIR, TITLE_DIR]:
-        if not os.path.exists(dir):
-            os.mkdir(dir)
-
-        output = open(os.path.join(dir, 'Makefile'), 'w')
-        print >>output, "include ~/files/www/scripts/make.rules"
-        output.close()
-
-    f = open(os.path.join(BASE_DIR, '.treeinfo'), 'w')
-    f.write('Book Reviews\n')
-    f.close()
-    
-    for path, title in [(SUBJECT_DIR, 'Subject Index'),
-                        (AUTHOR_DIR, 'Author Index'),
-                        (TITLE_DIR, 'Title Index'),
-                        (REVIEW_DIR, 'Reviews'),
-                        ]:
-        f = open(os.path.join(path, '.treeinfo'), 'w')
-        f.write('skip\n')
-        f.close()
 
     
 class BibEntry:
@@ -432,3 +395,32 @@ def get_pickle_filename (filename):
     dir = os.path.dirname(filename)
     filename = os.path.basename(filename)
     return os.path.join(dir, '.'+filename + '.pkl')
+
+#
+# Weblog API functions
+#
+
+def _get_xmlrpc_server():
+    return xmlrpclib.ServerProxy(XMLRPC_SERVER)
+
+def _get_wp_password():
+    # XXX need to implement a prompt
+    return 'XXX'
+
+def delete_all_posts():
+    """Lists all posts to the weblog and deletes them.
+    """
+    wp = _get_xmlrpc_server()
+    chunk = 50
+    password = _get_wp_password()
+    while True:
+        posts = wp.metaWeblog.getRecentPosts(WEBLOG_NAME, WEBLOG_USER,
+                                             password, chunk)
+        if len(posts) == 0:
+            break
+        for p in posts:
+            deleted = wp.blogger.deletePost(WEBLOG_NAME, p['postid'],
+                                            WEBLOG_USER, password, 
+                                            False)
+
+        
