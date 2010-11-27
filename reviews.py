@@ -311,11 +311,11 @@ class BibEntry:
                    'mt_keywords': self.fields.get('K'),
                    'dateCreated': xmlrpclib.DateTime(
                        '%04i%02i%02iT12:00:00' % self.get_review_date()),
-                   'wp_slug': self.filename,
                    'categories': cat_list,
                    'post_status': 'publish',
                   }
         if self.post_id is None:
+            content['wp_slug'] = self.filename
             self.post_id = wp.metaWeblog.newPost(
                 WEBLOG_NAME, WEBLOG_USER, password, content, True)
         else:
