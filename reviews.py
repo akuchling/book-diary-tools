@@ -1,5 +1,5 @@
 import os, re, cPickle, string, time
-import cgi
+import cgi, getpass
 import xmlrpclib
 import rst_html
 
@@ -415,9 +415,13 @@ def _get_xmlrpc_server():
     s = xmlrpclib.ServerProxy(XMLRPC_SERVER, verbose=0)
     return s
 
+_password = None
 def _get_wp_password():
-    # XXX need to implement a prompt
-    return 'XXX'
+    global _password
+
+    if _password is None:
+        _password = getpass.getpass('WordPress password? ')
+    return _password
 
 def delete_all_posts():
     """Lists all posts to the weblog and deletes them.
