@@ -42,15 +42,15 @@ abbrevs = { 'A': 'Author',
             '@': 'Date of review',
 }
 
-preferred_order = ['@', 'T', 'S', 'A', 'R', 'J', 'V', 
-                   'N', 'E', 'L', 'M', 'F', 'Q', 
-                   'I', 'C', 'D', 'G', 'P', 
+preferred_order = ['@', 'T', 'S', 'A', 'R', 'J', 'V',
+                   'N', 'E', 'L', 'M', 'F', 'Q',
+                   'I', 'C', 'D', 'G', 'P',
                    'U', 'K', 'Y', 'W', '*']
 
-    
+
 class BibEntry:
     multiple = ['A', 'E', 'F', 'Q']
-    
+
     def __init__ (self, filename):
         self.filename = make_filename(os.path.basename(filename))
         self.fields = {}
@@ -64,7 +64,7 @@ class BibEntry:
         output = open(get_pickle_filename(self.filename), 'wb')
         cPickle.dump(self, output, 1)
         output.close()
-	        
+
     def parse (self, input):
         self.body = ""
         while 1:
@@ -77,7 +77,7 @@ class BibEntry:
 
         self.body = self.body.strip()
         self.body = rst_html.process_rst(self.filename, self.body)
-        
+
         # Read metadata fields
         self.field_text = ""
         self.fields.clear()
@@ -98,7 +98,7 @@ class BibEntry:
                 self.fields[field] = value
 
         self.field_text = self.field_text.strip()
-        
+
         # Fix the fields
         L = self.fields.get('K', '').split(',')
         L = map(string.strip, L)
@@ -117,12 +117,12 @@ class BibEntry:
         title = cgi.escape(self.fields['T'])
         if self.fields.get('V'):
             title += ' (vol. %s)' % self.fields['V']
-                           
+
         link = '<a href="%s">%s</a>' % (url, title)
         if self.fields.get('S'):
             link += ': ' + cgi.escape(self.fields['S'])
         return link
-            
+
     def get_url (self):
         url = BASE_URL
         url += '/h/' + self.filename
@@ -145,7 +145,7 @@ class BibEntry:
         s = ''
         if not self.body.startswith('<p>'):
             s += '<p>'
-        s += self.body 
+        s += self.body
         return s
 
     def index (self):
@@ -156,7 +156,7 @@ class BibEntry:
         t = make_title(self.fields['T'])
         L = title_i.setdefault(t, [])
         L.append(self.filename)
-        
+
         for s in self.fields['K']:
             L = subject_i.setdefault(s, [])
             L.append(self.filename)
@@ -183,7 +183,7 @@ class BibEntry:
         assert len(L) == 3
         y, m, d = map(int, L)
         return y, m, d
-        
+
     def get_html_header (self):
         L = []
         e = cgi.escape
@@ -194,7 +194,7 @@ class BibEntry:
             L.append('<a href="%s" class="url">Web site</a>' % (g('U')))
         if g('V') and not g('J'):
             L.append(' (Vol. %s)' % g('V'))
-        
+
         for author in g('A', []):
             author = e(author)
             if g('W'):
@@ -218,7 +218,7 @@ class BibEntry:
             if translator:
                 lang += ' by ' + e(translator)
             L.append(lang)
-            
+
         illus = g('Q', [])
         if illus:
             illus = e('; '.join(g('Q')))
@@ -231,22 +231,22 @@ class BibEntry:
             volume = g('V')
             journal = '<cite>%s</cite> %s, no. %s' % (journal, volume, number)
             L.append(journal)
-            
+
         # Publishing info
         imprint = g('I', '') ; city = g('C')
         if imprint and city:
-            imprint += ': ' + city 
+            imprint += ': ' + city
         if g('D'):
             imprint += ' ' + g('D')
         if imprint:
             L.append(e(imprint))
-            
+
         if g('G'):
             L.append(e(g('G')))
 
         if g('P'):
             L.append(e(g('P')))
-            
+
         if g('@'):
             L.append('Date finished: <span class="dtreviewed">' + g('@') + '</span>')
 
@@ -263,7 +263,7 @@ class BibEntry:
         # Add item description
         L.insert(0, '<div class="item">')
         L.append('</div>')
-        
+
         s = '<br >\n'.join(L)
         s = "<p>" + s + "</p>\n"
         return s
@@ -279,9 +279,50 @@ class BibEntry:
                 re.search(r'\bfiction\b', subject) or
                 re.search(r'\bmystery\b', subject)):
                 return True
-            
+
         return False
-                            
+
+    def delete_post(self):
+        "Delete the post from the weblog."
+        assert self.post_id is not None
+        wp = _get_xmlrpc_server()
+        password = _get_wp_password()
+        deleted = wp.blogger.deletePost(WEBLOG_NAME, self.post_id,
+                                        WEBLOG_USER, password,
+                                        False)
+        self.post_id = self.permalink = None
+        self.updated = False
+        post_i[self.filename] = (None, None)
+
+    def update_post(self):
+        wp = _get_xmlrpc_server()
+        password = _get_wp_password()
+        fields = list(self.fields.get('K'))
+        if 'comics' in fields:
+            fields.remove('comics')
+            cat_list = ['comics']
+        else:
+            cat_list = ['books']
+
+        descr = self.get_html_header() + '\n' + self.as_html()
+
+        content = {'title': self.get_full_title(),
+                   'description': descr,
+                   'mt_keywords': self.fields.get('K'),
+                   'dateCreated': xmlrpclib.DateTime(
+                       '%04i%02i%02iT12:00:00' % self.get_review_date()),
+                   'wp_slug': self.filename,
+                   'categories': cat_list,
+                   'post_status': 'publish',
+                  }
+        if self.post_id is None:
+            self.post_id = wp.metaWeblog.newPost(
+                WEBLOG_NAME, WEBLOG_USER, password, content, True)
+        else:
+            wp.metaWeblog.editPost(
+                self.post_id, WEBLOG_USER, password, content, True)
+
+
 #
 # Define indexes
 #
@@ -337,15 +378,15 @@ def make_filename (title):
         title = title[:index]
 
     fn = re.sub(r'\s+', '_', title)
-    t = fn 
+    t = fn
     count = 2
     while 1:
         if not review_i.has_key(t):
             return t
-        t = fn + '_' + str(count) 
+        t = fn + '_' + str(count)
         count += 1
-        
-    
+
+
 def sort_by_title (L):
     L = [review_i[i] for i in L]
     L = [(remove_stopwords(r.fields['T']).lower(), r.review_date, r)
@@ -359,7 +400,7 @@ def sort_by_chron ():
     L = [(r.review_date, remove_stopwords(r.fields['T']).lower(), r)
          for r in L]
     L.sort() ; L.reverse()
-    return L    
+    return L
 
 def get_pickle_filename (filename):
     dir = os.path.dirname(filename)
@@ -371,7 +412,8 @@ def get_pickle_filename (filename):
 #
 
 def _get_xmlrpc_server():
-    return xmlrpclib.ServerProxy(XMLRPC_SERVER)
+    s = xmlrpclib.ServerProxy(XMLRPC_SERVER, verbose=0)
+    return s
 
 def _get_wp_password():
     # XXX need to implement a prompt
@@ -380,46 +422,20 @@ def _get_wp_password():
 def delete_all_posts():
     """Lists all posts to the weblog and deletes them.
     """
-    wp = _get_xmlrpc_server()
-    password = _get_wp_password()
     for review in review_i.values():
         if review.post_id is None:
             continue
-        deleted = wp.blogger.deletePost(WEBLOG_NAME, review.post_id,
-                                        WEBLOG_USER, password, 
-                                        False)
-        review.post_id = review.permalink = None
-        post_i[review.filename] = (None, None)
-
-def add_new_posts():
-    """Look for reviews that need to be posted.
-    """
-    wp = _get_xmlrpc_server()
-    password = _get_wp_password()
-    for review in review_i.values()[:3]:
-        if review.post_id is not None:
-            continue
-
-        fields = list(review.fields.get('K'))
-        if 'comics' in fields:
-            fields.remove('comics')
-            cat_list = ['comics']
-        else:
-            cat_list = ['books']
-
-        descr = review.get_html_header() + '\n' + review.as_html()
-        content = {'title': review.get_full_title(), 
-                   'description': descr, 
-                   'mt_keywords': review.fields.get('K'), 
-                   #'dateCreated': '%s 12:00:00' % review.fields.get('@'),
-                   'dateCreated': xmlrpclib.DateTime(
-                       '%s 12:00:00' % review.fields.get('@')), 
-                   'wp_slug': review.filename, 
-                   'categories': cat_list,
-                   'post_status': 'publish',
-                  }
-        review.post_id = wp.metaWeblog.newPost(
-            WEBLOG_NAME, WEBLOG_USER, password, content, True)
+        review.delete_post()
         review.save()
 
-        
+def add_new_posts():
+    """Look for reviews that need to be posted or updated.
+    """
+    for review in review_i.values():
+        if not (review.post_id is None or review.updated):
+            continue
+
+        review.update_post()
+        review.save()
+
+

@@ -11,5 +11,3 @@ if __name__ == '__main__':
     reviews.load()
     reviews.delete_all_posts()
     reviews.add_new_posts()
-
-
