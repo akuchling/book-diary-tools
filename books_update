@@ -9,3 +9,5 @@ import reviews
 
 if __name__ == '__main__':
     reviews.load()
+    reviews.add_new_posts()
+

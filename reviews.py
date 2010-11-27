@@ -8,7 +8,8 @@ HOME_DIR = os.environ['HOME']
 INDEX_FILENAME = os.path.join(HOME_DIR, 'files/books/index.pkl')
 
 # Directory holding the review source files
-SRC_DIR=os.path.join(HOME_DIR, 'files/books/s/')
+SRC_DIR = os.path.join(HOME_DIR, 'files/books/s/')
+SRC_DIR = os.path.join(HOME_DIR, 'source/repo/book-diary-tools')
 
 # Configuration for the posting mechanism
 XMLRPC_SERVER = 'http://books.amk.ca/xmlrpc.php'
@@ -56,6 +57,7 @@ class BibEntry:
         self.fields = {}
         self.field_text = None
         self.body = None
+        self.post_id = self.permalink = None
 
     def save (self):
         output = open(get_pickle_filename(self.filename), 'wb')
@@ -137,52 +139,17 @@ class BibEntry:
             return None
 
     def as_html (self):
-        s = '<div class=diary-entry>'
-        s += '<h2>Book: %s</h2>\n' % cgi.escape(self.get_full_title())
-        s += ('<span class=diary-date>%s</span>\n' % self.review_date)
-        s += ('<a class=diary-permalink href="%s">#</a>\n' % cgi.escape(self.get_url()))
+        s = ''
         if not self.body.startswith('<p>'):
             s += '<p>'
         s += self.body 
-        s += '\n</div>\n'
         return s
 
-    def write_output (self):
-        make_dirs()
-        title = self.fields['T']
-        filename = self.filename + '.ht'
-        path = os.path.join(BASE_DIR, 'h/' + filename)
-        isbn = self.get_isbn()
-        output = file(path, 'wt')
-        print >>output, 'Title: Book review: ' + title
-        print >>output, '\n'
-
-        print >>output, self.get_html_format()
-        output.close()
-
-        # Set the time of the file
-        if False:
-            y, m, d = self.get_review_date()
-            ftime = time.mktime((y,m,d,0,0,0,0,0,0))
-            if ftime is not None:
-                os.utime(path, (ftime, ftime))
-
-
-    def get_html_format (self):
-        S = '<div class="hreview">'
-        S += self.get_html_header() + '\n<p>\n'
-        # Convert text to HTML
-        S += ('<div class="description">' +
-              re.sub('\n\s*\n', '\n<p>\n', self.body) +
-              '</div>')
-
-        S += '</div>'                   # Close 'hreview' class
-        return S
-        
     def index (self):
         "Add this entry to the indexes"
 
         review_i[self.filename] = self
+        post_i[self.filename] = (self.post_id, self.permalink)
         t = make_title(self.fields['T'])
         L = title_i.setdefault(t, [])
         L.append(self.filename)
@@ -220,15 +187,10 @@ class BibEntry:
         g = self.fields.get
 
         # Title
-        title = e(self.get_full_title())
         if g('U'):
-            title = '<a href="%s" class="url">%s</a>' % (g('U'), title)
+            L.append('<a href="%s" class="url">Web site</a>' % (g('U')))
         if g('V') and not g('J'):
-            title += ' (Vol. %s)' % g('V')
-        title = '<big class="fn">' + title + '</big>'
-        if g('*'):
-            title += ' ' + g('*')
-        L.append(title)
+            L.append(' (Vol. %s)' % g('V'))
         
         for author in g('A', []):
             author = e(author)
@@ -292,6 +254,9 @@ class BibEntry:
                 buy = '<a href="http://www.amazon.com/exec/obidos/ASIN/%s">[Buy this book]</a>'
                 L.append(buy % isbn)
 
+        if g('*'):
+            L.append('Starred review')
+
         # Add item description
         L.insert(0, '<div class="item">')
         L.append('</div>')
@@ -317,19 +282,21 @@ class BibEntry:
 #
 # Define indexes
 #
-# review_i:   f_name -> (date, length, titles, subjects, authors)
+# review_i:   f_name -> BibEntry
+# post_i:     f_name -> (post_id, permalink)
 # title_i:    title -> [f_name]
 # subject_i:  subject -> [f_name]
 # author_i:   author -> [f_name]
 
 review_i = {}
+post_i = {}
 subject_i = {}
 title_i = {}
 author_i = {}
 
 def load ():
     "Load indexes for the book review databases"
-    for d in review_i, subject_i, title_i, author_i:
+    for d in review_i, post_i, subject_i, title_i, author_i:
         d.clear()
     for dirname, dirs, files in os.walk(SRC_DIR):
         for f in files:
@@ -411,16 +378,44 @@ def delete_all_posts():
     """Lists all posts to the weblog and deletes them.
     """
     wp = _get_xmlrpc_server()
-    chunk = 50
     password = _get_wp_password()
-    while True:
-        posts = wp.metaWeblog.getRecentPosts(WEBLOG_NAME, WEBLOG_USER,
-                                             password, chunk)
-        if len(posts) == 0:
-            break
-        for p in posts:
-            deleted = wp.blogger.deletePost(WEBLOG_NAME, p['postid'],
-                                            WEBLOG_USER, password, 
-                                            False)
+    for review in review_i.values():
+        if review.post_id is None:
+            continue
+        deleted = wp.blogger.deletePost(WEBLOG_NAME, review.post_id,
+                                        WEBLOG_USER, password, 
+                                        False)
+        review.post_id = review.permalink = None
+        post_i[review.filename] = (None, None)
+
+def add_new_posts():
+    """Look for reviews that need to be posted.
+    """
+    wp = _get_xmlrpc_server()
+    password = _get_wp_password()
+    for review in review_i.values()[:3]:
+        if review.post_id is not None:
+            continue
+
+        fields = list(review.fields.get('K'))
+        if 'comics' in fields:
+            fields.remove('comics')
+            cat_list = ['comics']
+        else:
+            cat_list = ['books']
+
+        descr = review.get_html_header() + '\n' + review.as_html()
+        content = {'title': review.get_full_title(), 
+                   'description': descr, 
+                   'mt_keywords': review.fields.get('K'), 
+                   'dateCreated': xmlrpclib.DateTime(
+                      '%s 12:00:00' % review.fields.get('@')), 
+                   #'wp_slug':'foonly', 
+                   'categories': cat_list,
+                   'post_status': 'publish',
+                  }
+        review.post_id = wp.metaWeblog.newPost(
+            WEBLOG_NAME, WEBLOG_USER, password, content, True)
+        review.save()
 
         

@@ -32,7 +32,6 @@ for filename in os.listdir('.'):
             print 'Skipping', filename
         else:
             print 'Updating', filename
-            entry.write_output()
             entry.save()
         
         input.close()
