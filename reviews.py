@@ -9,7 +9,6 @@ INDEX_FILENAME = os.path.join(HOME_DIR, 'files/books/index.pkl')
 
 # Directory holding the review source files
 SRC_DIR = os.path.join(HOME_DIR, 'files/books/s/')
-SRC_DIR = os.path.join(HOME_DIR, 'source/repo/book-diary-tools')
 
 # Configuration for the posting mechanism
 XMLRPC_SERVER = 'http://books.amk.ca/xmlrpc.php'
