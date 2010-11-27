@@ -51,15 +51,17 @@ class BibEntry:
 
     def __init__ (self, filename):
         self.filename = make_filename(os.path.basename(filename))
+        self.full_path = filename
         self.fields = {}
         self.field_text = None
         self.body = None
-        self.review_date = self.updated = None
+        self.review_date = None
         self.post_id = self.permalink = None
         self.updated = False
 
     def save (self):
-        output = open(get_pickle_filename(self.filename), 'wb')
+        ##print 'writing', get_pickle_filename(self.full_path)
+        output = open(get_pickle_filename(self.full_path), 'wb')
         cPickle.dump(self, output, 1)
         output.close()
 
@@ -436,6 +438,7 @@ def add_new_posts():
     """Look for reviews that need to be posted or updated.
     """
     for review in review_i.values():
+        ##print review.post_id, review.updated
         if not (review.post_id is None or review.updated):
             continue
 
