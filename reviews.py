@@ -5,7 +5,6 @@ import rst_html
 
 # Filename for the pickled indexes
 HOME_DIR = os.environ['HOME']
-INDEX_FILENAME = os.path.join(HOME_DIR, 'files/books/index.pkl')
 
 # Directory holding the review source files
 SRC_DIR = os.path.join(HOME_DIR, 'files/books/s/')
