@@ -8,7 +8,7 @@ corresponding pickle files.
 
 """
 
-import sys, os
+import sys, os, pickle
 import reviews
 
 # XXX This won't erase a .pkl file if the corresponding regular file
@@ -24,8 +24,15 @@ for filename in os.listdir('.'):
     pkl_file = reviews.get_pickle_filename(filename)
     if (not os.path.exists(pkl_file) or 
 	 os.path.getmtime(pkl_file) < os.path.getmtime(filename)):
+        # Read existing pickle
+        if os.path.exists(pkl_file):
+            input = open(pkl_file, 'rb')
+            entry = pickle.load(input)
+            input.close()
+        else:
+            entry = reviews.BibEntry(filename)
+        
         input = open(filename, 'r')
-        entry = reviews.BibEntry(filename)
         try:
             entry.parse(input)
         except RuntimeError:

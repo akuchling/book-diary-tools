@@ -53,11 +53,12 @@ class BibEntry:
     
     def __init__ (self, filename):
         self.filename = make_filename(os.path.basename(filename))
-        
         self.fields = {}
         self.field_text = None
         self.body = None
+        self.review_date = self.updated = None
         self.post_id = self.permalink = None
+        self.updated = False
 
     def save (self):
         output = open(get_pickle_filename(self.filename), 'wb')
@@ -79,7 +80,8 @@ class BibEntry:
         
         # Read metadata fields
         self.field_text = ""
-        while 1:
+        self.fields.clear()
+        while True:
             L = input.readline()
             if L == "":
                 break
@@ -107,9 +109,10 @@ class BibEntry:
         self.review_date = self.fields.get('@')
         if self.review_date:
             self.review_date = self.review_date.strip()
-        self.pub_date = None
+        self.updated = True
 
     def link (self):
+        "Return a link to the review; used by books_best."
         url = self.get_url()
         title = cgi.escape(self.fields['T'])
         if self.fields.get('V'):
@@ -408,9 +411,10 @@ def add_new_posts():
         content = {'title': review.get_full_title(), 
                    'description': descr, 
                    'mt_keywords': review.fields.get('K'), 
+                   #'dateCreated': '%s 12:00:00' % review.fields.get('@'),
                    'dateCreated': xmlrpclib.DateTime(
-                      '%s 12:00:00' % review.fields.get('@')), 
-                   #'wp_slug':'foonly', 
+                       '%s 12:00:00' % review.fields.get('@')), 
+                   'wp_slug': review.filename, 
                    'categories': cat_list,
                    'post_status': 'publish',
                   }
