@@ -295,6 +295,7 @@ class BibEntry:
     def update_post(self):
         wp = _get_xmlrpc_server()
         password = _get_wp_password()
+        print 'Updating post', self.filename
         fields = list(self.fields.get('K'))
         if 'comics' in fields:
             fields.remove('comics')
@@ -320,6 +321,7 @@ class BibEntry:
             wp.metaWeblog.editPost(
                 self.post_id, WEBLOG_USER, password, content, True)
 
+        self.updated = False
 
 #
 # Define indexes
