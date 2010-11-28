@@ -46,6 +46,11 @@ preferred_order = ['@', 'T', 'S', 'A', 'R', 'J', 'V',
                    'U', 'K', 'Y', 'W', '*']
 
 
+def as_unicode (S):
+    """Return a Unicode string, decoding assuming Latin-1 encoding."""
+    return S.decode('latin-1')
+
+
 class BibEntry:
     multiple = ['A', 'E', 'F', 'Q']
 
@@ -237,7 +242,7 @@ class BibEntry:
         if imprint and city:
             imprint += ': ' + city
         if g('D'):
-            imprint += ' ' + g('D')
+            imprint += ', ' + g('D')
         if imprint:
             L.append(e(imprint))
 
@@ -306,9 +311,9 @@ class BibEntry:
             cat_list = ['books']
 
         descr = self.get_html_header() + '\n' + self.as_html()
-
-        content = {'title': self.get_full_title(),
-                   'description': descr,
+        
+        content = {'title': as_unicode(self.get_full_title()),
+                   'description': as_unicode(descr),
                    'mt_keywords': self.fields.get('K'),
                    'dateCreated': xmlrpclib.DateTime(
                        '%04i%02i%02iT12:00:00' % self.get_review_date()),
