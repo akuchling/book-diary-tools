@@ -445,4 +445,28 @@ def add_new_posts():
         review.update_post()
         review.save()
 
+def reset_weblog():
+    "Delete all weblog posts, except for those in the 'Commentary' category."
+    wp = _get_xmlrpc_server()
+    password = _get_wp_password()
+    chunk = 100
+    to_skip = set()
+    while True:
+        posts = wp.metaWeblog.getRecentPosts(WEBLOG_NAME, WEBLOG_USER,
+                                             password, chunk)
+        posts = [p for p in posts
+                 if p['postid'] not in to_skip]
+        if len(posts) == 0:
+            break
+        print 'Deleting', len(posts), 'posts'
+        for p in posts:
+            # Skip hand-written posts in the 'Commentary' categories.
+            if 'Commentary' in p['categories']:
+                to_skip.add(p['postid'])
+                continue
+                            
+            deleted = wp.blogger.deletePost(WEBLOG_NAME, p['postid'],
+                                            WEBLOG_USER, password, 
+                                            False)
+            
 
