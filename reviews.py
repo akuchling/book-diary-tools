@@ -310,7 +310,7 @@ class BibEntry:
         else:
             cat_list = ['books']
 
-        descr = self.get_html_header() + '\n' + self.as_html()
+        descr = self.get_html_header() + '\n' + self.as_html().replace('\n', ' ')
         
         content = {'title': as_unicode(self.get_full_title()),
                    'description': as_unicode(descr),
