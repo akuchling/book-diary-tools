@@ -129,9 +129,7 @@ class BibEntry:
         return link
 
     def get_url (self):
-        url = BASE_URL
-        url += '/h/' + self.filename
-        return url
+        return 'http://books.amk.ca/%s' % self.filename
 
     def get_isbn (self):
         g = self.fields.get('G')
@@ -345,18 +343,23 @@ subject_i = {}
 title_i = {}
 author_i = {}
 
-def load ():
-    "Load indexes for the book review databases"
-    for d in review_i, post_i, subject_i, title_i, author_i:
-        d.clear()
+def scan_pickles ():
+    "Yield the filenames of the .pkl files."
     for dirname, dirs, files in os.walk(SRC_DIR):
         for f in files:
 	    if not (f.startswith('.') and f.endswith('.pkl')):
 	        continue
-            input = open(os.path.join(dirname, f), 'rb')
-	    entry = cPickle.load(input)
-	    entry.index()
-	    input.close()
+            yield os.path.join(dirname, f)
+
+def load ():
+    "Load indexes for the book review databases"
+    for d in review_i, post_i, subject_i, title_i, author_i:
+        d.clear()
+    for f in scan_pickles():
+        input = open(f, 'rb')
+        entry = cPickle.load(input)
+        entry.index()
+        input.close()
 
 
 STOPWORDS = ['a', 'and', 'the', 'of']
@@ -474,4 +477,10 @@ def reset_weblog():
                                             WEBLOG_USER, password, 
                                             False)
             
+    for f in scan_pickles():
+        os.unlink(f)
+        input = open(os.path.join(dirname, f), 'rb')
+        entry = cPickle.load(input)
+        entry.postid = None
+        entry.save()
 
