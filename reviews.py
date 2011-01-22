@@ -240,7 +240,11 @@ class BibEntry:
         if imprint and city:
             imprint += ': ' + city
         if g('D'):
-            imprint += ', ' + g('D')
+            if imprint:
+                imprint += ', ' + g('D')
+            else:
+                imprint = g('D')
+
         if imprint:
             L.append(e(imprint))
 
