@@ -1,12 +1,7 @@
 #!/usr/bin/env python
 # -*-Python-*-
-
-""" 
-
-Script: Scans all regular files in a directory and updates the
-corresponding pickle files.
-
-"""
+#
+# Description: Updates all pickle files in the current directory. 
 
 import sys, os, pickle
 import reviews
