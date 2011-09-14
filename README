@@ -1,0 +1,6 @@
+
+Requires subcommander for the 'books' command.  Currently this
+repository assumes that there is a checkout of subcommander in
+~/source/repo/subcommander/.
+
+
