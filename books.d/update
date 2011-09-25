@@ -11,7 +11,7 @@ import reviews
 
 for filename in os.listdir('.'):
     if (filename.endswith('.pkl') or filename.endswith('~') or
-	filename == 'Makefile'):
+	filename == 'Makefile' or filename.startswith('.')):
 	continue
     if not os.path.isfile(filename):
         continue
