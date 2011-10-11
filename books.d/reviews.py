@@ -482,9 +482,5 @@ def reset_weblog():
                                             False)
             
     for f in scan_pickles():
-        os.unlink(f)
-        input = open(os.path.join(dirname, f), 'rb')
-        entry = cPickle.load(input)
-        entry.postid = None
-        entry.save()
+        os.unlink(os.path.join(dirname, f))
 
