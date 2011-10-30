@@ -482,5 +482,5 @@ def reset_weblog():
                                             False)
             
     for f in scan_pickles():
-        os.unlink(os.path.join(dirname, f))
+        os.unlink(f)
 
