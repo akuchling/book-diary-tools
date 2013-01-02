@@ -4,6 +4,7 @@
 # Description: Prints a list of the best books for each year.
 #
 
+import sys
 import reviews
 
 def print_stats (year):
