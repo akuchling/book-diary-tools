@@ -180,7 +180,6 @@ class BibEntry:
     def get_review_date (self):
         date = self.fields.get('@', None)
         if date is None:
-            print self.fields['T']
             return None
         L = date.split('-')
         assert len(L) == 3
