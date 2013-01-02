@@ -275,7 +275,8 @@ class BibEntry:
         s = "<p>" + s + "</p>\n"
         return s
 
-    also_fiction = ['fantasy', 'erotica', 'novel', 'mystery']
+    also_fiction = ['fantasy', 'erotica', 'novel', 'mystery', 'horror', 'sf',
+                    'comics']
     def is_fiction (self):
         "Returns true if this book is fiction."
         keywords = self.fields.get('K', [])
