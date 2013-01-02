@@ -27,7 +27,10 @@ for filename in os.listdir('.'):
         else:
             entry = reviews.BibEntry(filename)
             entry.full_path = os.path.join(os.getcwd(), filename)
-        
+
+        if entry.get_review_date() is None:
+            print >>sys.stderr, "File %r is missing a review date" % entry.filename
+
         input = open(filename, 'r')
         try:
             entry.parse(input)
