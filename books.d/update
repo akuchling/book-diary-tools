@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*-Python-*-
 #
 # Description: Updates all pickle files in the current directory. 
@@ -28,16 +28,17 @@ for filename in os.listdir('.'):
             entry = reviews.BibEntry(filename)
             entry.full_path = os.path.join(os.getcwd(), filename)
 
-        if entry.get_review_date() is None:
-            print >>sys.stderr, "File %r is missing a review date" % entry.filename
-
         input = open(filename, 'r')
         try:
             entry.parse(input)
         except RuntimeError:
-            print 'Skipping', filename
+            print('Skipping', filename)
         else:
-            print 'Updating', filename
+            if entry.get_review_date() is None:
+                print(("File %r is missing a review date" % entry.filename),
+                      file=sys.stderr)
+
+            print('Updating', filename)
             entry.save()
         
         input.close()
