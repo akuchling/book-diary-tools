@@ -11,7 +11,7 @@ from docutils.writers import html4css1
 
 class WeblogWriter (html4css1.Writer):
     def __init__ (self):
-        html4css1.Writer.__init__(self)
+        super().__init__()
         self.translator_class = WeblogHTMLTranslator
 
 class WeblogHTMLTranslator (html4css1.HTMLTranslator):
@@ -20,7 +20,7 @@ class WeblogHTMLTranslator (html4css1.HTMLTranslator):
     content_type = "<!-- %s -->"
 	
     def __init__(self, document):
-        html4css1.HTMLTranslator.__init__(self, document)
+        super().__init__(document)
         self.head_prefix = []
         self.body_prefix = []
         self.stylesheet = []
@@ -49,7 +49,8 @@ def process_rst (filename, body):
         source=body,
         destination_path=filename,
         settings=None,
-	settings_overrides={'input_encoding':'iso-8859-1', 'output_encoding':'iso-8859-1'})
+	settings_overrides={'input_encoding':'utf-8', 
+                            'output_encoding':'iso-8859-1'})
 
     return body
 
