@@ -4,6 +4,7 @@
 # Description: Updates all pickle files in the current directory. 
 
 import sys, os, pickle
+import traceback
 import reviews
 
 # XXX This won't erase a .pkl file if the corresponding regular file
@@ -32,7 +33,10 @@ for filename in os.listdir('.'):
         try:
             entry.parse(input)
         except RuntimeError:
-            print('Skipping', filename)
+            print('Skipping', filename, file=sys.stderr)
+        except Exception:
+            print('Exception processing file', filename, file=sys.stderr)
+            traceback.print_exc()
         else:
             if entry.get_review_date() is None:
                 print(("File %r is missing a review date" % entry.filename),
