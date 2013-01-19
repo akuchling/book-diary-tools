@@ -1,7 +1,7 @@
 
-import os, re, cPickle, string, time
+import os, re, pickle, string, time
 import cgi, getpass
-import xmlrpclib
+import xmlrpc.client
 import rst_html
 
 # Filename for the pickled indexes
@@ -68,7 +68,7 @@ class BibEntry:
     def save (self):
         ##print 'writing', get_pickle_filename(self.full_path)
         output = open(get_pickle_filename(self.full_path), 'wb')
-        cPickle.dump(self, output, 1)
+        pickle.dump(self, output, 1)
         output.close()
 
     def parse (self, input):
@@ -76,7 +76,7 @@ class BibEntry:
         while 1:
             L = input.readline()
             if L == "":
-                raise RuntimeError, 'No bibliographic data: ' + self.filename
+                raise RuntimeError('No bibliographic data: ' + self.filename)
             if re.match('^-{2,}$', L):
                 break
             self.body += L
@@ -107,9 +107,8 @@ class BibEntry:
 
         # Fix the fields
         L = self.fields.get('K', '').split(',')
-        L = map(string.strip, L)
-        L = map(string.lower, L)
-        L = filter(None, L)
+        L = [x.strip().lower() for x in L]
+        L = [x for x in L if x]
         self.fields['K'] = L
 
         self.review_date = self.fields.get('@')
@@ -305,7 +304,7 @@ class BibEntry:
     def update_post(self):
         wp = _get_xmlrpc_server()
         password = _get_wp_password()
-        print 'Updating post', self.filename
+        print('Updating post', self.filename)
         fields = list(self.fields.get('K'))
         if 'comics' in fields:
             fields.remove('comics')
@@ -318,7 +317,7 @@ class BibEntry:
         content = {'title': as_unicode(self.get_full_title()),
                    'description': as_unicode(descr),
                    'mt_keywords': self.fields.get('K'),
-                   'dateCreated': xmlrpclib.DateTime(
+                   'dateCreated': xmlrpc.client.DateTime(
                        '%04i%02i%02iT12:00:00' % self.get_review_date()),
                    'categories': cat_list,
                    'post_status': 'publish',
@@ -362,7 +361,7 @@ def load ():
         d.clear()
     for f in scan_pickles():
         input = open(f, 'rb')
-        entry = cPickle.load(input)
+        entry = pickle.load(input)
         entry.index()
         input.close()
 
@@ -411,7 +410,7 @@ def sort_by_title (L):
     return L
 
 def sort_by_chron ():
-    L = review_i.values()
+    L = list(review_i.values())
     L = [(r.review_date, remove_stopwords(r.fields['T']).lower(), r)
          for r in L]
     L.sort() ; L.reverse()
@@ -427,7 +426,7 @@ def get_pickle_filename (filename):
 #
 
 def _get_xmlrpc_server():
-    s = xmlrpclib.ServerProxy(XMLRPC_SERVER, verbose=0)
+    s = xmlrpc.client.ServerProxy(XMLRPC_SERVER, verbose=0)
     return s
 
 _password = None
@@ -441,7 +440,7 @@ def _get_wp_password():
 def delete_all_posts():
     """Lists all posts to the weblog and deletes them.
     """
-    for review in review_i.values():
+    for review in list(review_i.values()):
         if review.post_id is None:
             continue
         review.delete_post()
@@ -450,7 +449,7 @@ def delete_all_posts():
 def add_new_posts():
     """Look for reviews that need to be posted or updated.
     """
-    for review in review_i.values():
+    for review in list(review_i.values()):
         ##print review.post_id, review.updated
         if not (review.post_id is None or review.updated):
             continue
@@ -471,7 +470,7 @@ def reset_weblog():
                  if p['postid'] not in to_skip]
         if len(posts) == 0:
             break
-        print 'Deleting', len(posts), 'posts'
+        print('Deleting', len(posts), 'posts')
         for p in posts:
             # Skip hand-written posts in the 'Commentary' categories.
             if 'Commentary' in p['categories']:

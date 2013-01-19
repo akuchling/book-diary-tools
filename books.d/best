@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*-Python-*-
 # 
 # Description: Prints a list of the best books for each year.
@@ -9,13 +9,13 @@ import reviews
 
 def print_stats (year):
     ylist = years[year]
-    print len(ylist), 'books read in', year
+    print(len(ylist), 'books read in', year)
     fict = 0
     for e in ylist:
         if e.is_fiction(): fict += 1
-    print 'Fiction titles:', fict, '(%i%%)' % (100.0*fict/len(ylist))
-    print 'Non-fiction titles:', len(ylist)-fict
-    print
+    print('Fiction titles:', fict, '(%i%%)' % (100.0*fict/len(ylist)))
+    print('Non-fiction titles:', len(ylist)-fict)
+    print()
 
 
 if __name__ == '__main__':
@@ -25,12 +25,12 @@ if __name__ == '__main__':
     cur_year = None
     for rev_date, title, entry in reviews.sort_by_chron():
         if entry.review_date is None:
-            print >>sys.stderr, ('Entry for %s lacks a reading date'
-                                 % entry.fields.get('T'))
+            print(('Entry for %s lacks a reading date'
+                                 % entry.fields.get('T')), file=sys.stderr)
             continue
         if cur_year is None or not entry.review_date.startswith(cur_year):
             cur_year = entry.review_date[:4]
-            print cur_year
+            print(cur_year)
 
         L = years.setdefault(cur_year, [])
         L.append(entry)
@@ -46,7 +46,7 @@ if __name__ == '__main__':
             if authors is not None:
                 authors = [flip(a) for a in authors]
                 s += ", " + (', '.join(authors))
-            print s + ":"
+            print(s + ":")
 
     for year in sorted(years.keys()):
         print_stats(year)

@@ -1,12 +1,12 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*-Python-*-
 # 
 # Contains the process_rst() function, which turns ReST files into
 # HTML output that can be included in a page.
 #
 
-import StringIO
-from docutils import core, io
+import io
+from docutils import core
 from docutils.writers import html4css1
 
 class WeblogWriter (html4css1.Writer):
@@ -39,7 +39,7 @@ class WeblogHTMLTranslator (html4css1.HTMLTranslator):
                                             
 def process_rst (filename, body):
     "Parse 'body' as RST and convert it to HTML"
-    output_file = StringIO.StringIO()
+    output_file = io.StringIO()
     body = core.publish_string(
         reader_name='standalone',
         parser_name='restructuredtext',
