@@ -11,14 +11,14 @@ import reviews
 
 for filename in os.listdir('.'):
     if (filename.endswith('.pkl') or filename.endswith('~') or
-	filename == 'Makefile' or filename.startswith('.')):
-	continue
+        filename == 'Makefile' or filename.startswith('.')):
+        continue
     if not os.path.isfile(filename):
         continue
 
     pkl_file = reviews.get_pickle_filename(filename)
     if (not os.path.exists(pkl_file) or 
-	 os.path.getmtime(pkl_file) < os.path.getmtime(filename)):
+         os.path.getmtime(pkl_file) < os.path.getmtime(filename)):
         # Read existing pickle
         if os.path.exists(pkl_file):
             input = open(pkl_file, 'rb')
