@@ -1,3 +1,4 @@
+
 import os, re, cPickle, string, time
 import cgi, getpass
 import xmlrpclib
@@ -351,8 +352,8 @@ def scan_pickles ():
     "Yield the filenames of the .pkl files."
     for dirname, dirs, files in os.walk(SRC_DIR):
         for f in files:
-	    if not (f.startswith('.') and f.endswith('.pkl')):
-	        continue
+            if not (f.startswith('.') and f.endswith('.pkl')):
+                continue
             yield os.path.join(dirname, f)
 
 def load ():
@@ -395,7 +396,7 @@ def make_filename (title):
     t = fn
     count = 2
     while 1:
-        if not review_i.has_key(t):
+        if t not in review_i:
             return t
         t = fn + '_' + str(count)
         count += 1
