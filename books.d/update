@@ -10,50 +10,53 @@ import reviews
 # XXX This won't erase a .pkl file if the corresponding review file
 # disappears.  If you rename files, be sure to delete all the pickle files.
 
-for filename in os.listdir('.'):
-    # Skip various files
-    if (filename.endswith(('.pkl', '~')) or
-        filename == 'Makefile' or filename.startswith('.')):
-        continue
+def main():
+    for filename in os.listdir('.'):
+        # Skip various files
+        if (filename.endswith(('.pkl', '~')) or
+            filename == 'Makefile' or filename.startswith('.')):
+            continue
 
-    # Don't process directories.
-    if not os.path.isfile(filename):
-        continue
+        # Don't process directories.
+        if not os.path.isfile(filename):
+            continue
 
-    # Main loop: for reviews that are new or have been edited, we'll read the
-    # existing pickle file (if present), and then parse the review file's
-    # contents anew.  Reading the existing pickle means that other scripts
-    # can add attributes to BibEntry instances and resave them; running an
-    # update will therefore not lose any attributes added by other scripts.
+        # Main loop: for reviews that are new or have been edited, we'll read the
+        # existing pickle file (if present), and then parse the review file's
+        # contents anew.  Reading the existing pickle means that other scripts
+        # can add attributes to BibEntry instances and resave them; running an
+        # update will therefore not lose any attributes added by other scripts.
 
-    pkl_file = reviews.get_pickle_filename(filename)
-    if (not os.path.exists(pkl_file) or 
-         os.path.getmtime(pkl_file) < os.path.getmtime(filename)):
+        pkl_file = reviews.get_pickle_filename(filename)
+        if (not os.path.exists(pkl_file) or 
+             os.path.getmtime(pkl_file) < os.path.getmtime(filename)):
 
-        if os.path.exists(pkl_file):
-            # Read existing pickle file
-            pkl_f = open(pkl_file, 'rb')
-            entry = pickle.load(pkl_f)
-            pkl_f.close()
-        else:
-            entry = reviews.BibEntry(filename)
+            if os.path.exists(pkl_file):
+                # Read existing pickle file
+                pkl_f = open(pkl_file, 'rb')
+                entry = pickle.load(pkl_f)
+                pkl_f.close()
+            else:
+                entry = reviews.BibEntry(filename)
 
-        # Parse contents of the input file.
-        rst_input = open(filename, 'r')
-        try:
-            entry.parse(rst_input)
-        except RuntimeError:
-            print('Skipping', filename, file=sys.stderr)
-        except Exception:
-            print('Exception processing file', filename, file=sys.stderr)
-            traceback.print_exc()
-        else:
-            if entry.get_review_date() is None:
-                print(("File %r is missing a review date" % entry.filename),
-                      file=sys.stderr)
+            # Parse contents of the input file.
+            rst_input = open(filename, 'r')
+            try:
+                entry.parse(rst_input)
+            except RuntimeError:
+                print('Skipping', filename, file=sys.stderr)
+            except Exception:
+                print('Exception processing file', filename, file=sys.stderr)
+                traceback.print_exc()
+            else:
+                if entry.get_review_date() is None:
+                    print(("File %r is missing a review date" % entry.filename),
+                          file=sys.stderr)
 
-            print('Updating', filename)
-            entry.save()
-        finally:
-            rst_input.close()
+                print('Updating', filename)
+                entry.save()
+            finally:
+                rst_input.close()
 
+if __name__ == '__main__':
+    main()
