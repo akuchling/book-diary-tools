@@ -36,7 +36,6 @@ abbrevs = { 'A': 'Author',
             'U': 'URL',
             'V': 'Volume',
             'W': 'Location', # Author URL
-            'Y': 'Categorization',
             '*': 'Score',    # * for good books, ** for really good books
             '@': 'Date of review',
 }
@@ -44,7 +43,7 @@ abbrevs = { 'A': 'Author',
 preferred_order = ['@', 'T', 'S', 'A', 'R', 'J', 'V',
                    'N', 'E', 'L', 'M', 'F', 'Q',
                    'I', 'C', 'D', 'G', 'P',
-                   'U', 'K', 'Y', 'W', '*']
+                   'U', 'K', 'W', '*']
 
 
 def as_unicode (S):
