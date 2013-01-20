@@ -1,0 +1,39 @@
+#!/usr/bin/env python3
+# -*-Python-*-
+#
+# Description: Prints statistics about the books read in each year.
+#
+
+import sys, collections
+import reviews
+
+def print_stats (year):
+    ylist = years[year]
+    print(len(ylist), 'books read in', year)
+    fict = 0
+    for e in ylist:
+        if e.is_fiction():
+            fict += 1
+
+    print('Fiction titles:', fict, '(%i%%)' % (100.0 * fict / len(ylist)))
+    print('Non-fiction titles:', len(ylist)-fict)
+    print()
+
+
+
+if __name__ == '__main__':
+    reviews.load()
+
+    years = collections.defaultdict(list)
+
+    for rev_date, title, entry in reviews.sort_by_chron():
+        if entry.review_date is None:
+            print(('Entry for %s lacks a reading date' % entry.fields.get('T')),
+                  file=sys.stderr)
+            continue
+
+        year = entry.review_date[:4]
+        years[year].append(entry)
+
+    for year in sorted(years.keys()):
+        print_stats(year)
