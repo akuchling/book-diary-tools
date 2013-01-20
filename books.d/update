@@ -7,31 +7,41 @@ import sys, os, pickle
 import traceback
 import reviews
 
-# XXX This won't erase a .pkl file if the corresponding regular file
+# XXX This won't erase a .pkl file if the corresponding review file
 # disappears.  If you rename files, be sure to delete all the pickle files.
 
 for filename in os.listdir('.'):
-    if (filename.endswith('.pkl') or filename.endswith('~') or
+    # Skip various files
+    if (filename.endswith(('.pkl', '~')) or
         filename == 'Makefile' or filename.startswith('.')):
         continue
+
+    # Don't process directories.
     if not os.path.isfile(filename):
         continue
+
+    # Main loop: for reviews that are new or have been edited, we'll read the
+    # existing pickle file (if present), and then parse the review file's
+    # contents anew.  Reading the existing pickle means that other scripts
+    # can add attributes to BibEntry instances and resave them; running an
+    # update will therefore not lose any attributes added by other scripts.
 
     pkl_file = reviews.get_pickle_filename(filename)
     if (not os.path.exists(pkl_file) or 
          os.path.getmtime(pkl_file) < os.path.getmtime(filename)):
-        # Read existing pickle
+
         if os.path.exists(pkl_file):
-            input = open(pkl_file, 'rb')
-            entry = pickle.load(input)
-            input.close()
+            # Read existing pickle file
+            pkl_f = open(pkl_file, 'rb')
+            entry = pickle.load(pkl_f)
+            pkl_f.close()
         else:
             entry = reviews.BibEntry(filename)
-            entry.full_path = os.path.join(os.getcwd(), filename)
 
-        input = open(filename, 'r')
+        # Parse contents of the input file.
+        rst_input = open(filename, 'r')
         try:
-            entry.parse(input)
+            entry.parse(rst_input)
         except RuntimeError:
             print('Skipping', filename, file=sys.stderr)
         except Exception:
@@ -44,6 +54,6 @@ for filename in os.listdir('.'):
 
             print('Updating', filename)
             entry.save()
-        
-        input.close()
+        finally:
+            rst_input.close()
 

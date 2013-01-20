@@ -56,8 +56,8 @@ class BibEntry:
     multiple = ['A', 'E', 'F', 'Q']
 
     def __init__ (self, filename):
-        self.filename = make_filename(os.path.basename(filename))
-        self.full_path = filename
+        self.filename = filename
+        self.full_path = os.path.join(os.getcwd(), filename)
         self.fields = {}
         self.field_text = None
         self.body = None
@@ -281,6 +281,7 @@ class BibEntry:
         keywords = self.fields.get('K', [])
         if 'reference' in keywords:
             return False
+
         for subject in keywords:
             if (subject in self.also_fiction or
                 re.search(r'\bfiction\b', subject) or
