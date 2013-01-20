@@ -4,7 +4,6 @@
 # Description: Posts any updated entries to a weblog.
 #
 
-import sys
 import reviews
 
 if __name__ == '__main__':
