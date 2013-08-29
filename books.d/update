@@ -1,24 +1,26 @@
 #!/usr/bin/env python3
 # -*-Python-*-
 #
-# Description: Updates all pickle files in the current directory. 
+# Description: Updates all pickle files in the current directory.
 
 import sys, os, pickle
 import traceback
 import reviews
 
 # XXX This won't erase a .pkl file if the corresponding review file
-# disappears.  If you rename files, be sure to delete all the pickle files.
+# disappears.  If you rename files, be sure to delete all the pickle
+# files using 'books clean'.
 
-def main():
-    for filename in os.listdir('.'):
+def update_directory (dirpath):
+    for filename in os.listdir(dirpath):
         # Skip various files
         if (filename.endswith(('.pkl', '~')) or
             filename == 'Makefile' or filename.startswith('.')):
             continue
 
         # Don't process directories.
-        if not os.path.isfile(filename):
+        path = os.path.join(dirpath, filename)
+        if not os.path.isfile(path):
             continue
 
         # Main loop: for reviews that are new or have been edited, we'll read the
@@ -27,9 +29,9 @@ def main():
         # can add attributes to BibEntry instances and resave them; running an
         # update will therefore not lose any attributes added by other scripts.
 
-        pkl_file = reviews.get_pickle_filename(filename)
-        if (not os.path.exists(pkl_file) or 
-             os.path.getmtime(pkl_file) < os.path.getmtime(filename)):
+        pkl_file = reviews.get_pickle_filename(path)
+        if (not os.path.exists(pkl_file) or
+             os.path.getmtime(pkl_file) < os.path.getmtime(path)):
 
             if os.path.exists(pkl_file):
                 # Read existing pickle file
@@ -37,26 +39,34 @@ def main():
                 entry = pickle.load(pkl_f)
                 pkl_f.close()
             else:
-                entry = reviews.BibEntry(filename)
+                entry = reviews.BibEntry(path)
 
             # Parse contents of the input file.
-            rst_input = open(filename, 'r')
+            rst_input = open(path, 'r')
             try:
                 entry.parse(rst_input)
             except RuntimeError:
-                print('Skipping', filename, file=sys.stderr)
+                print('Skipping', path, file=sys.stderr)
             except Exception:
-                print('Exception processing file', filename, file=sys.stderr)
+                print('Exception processing file', path, file=sys.stderr)
                 traceback.print_exc()
             else:
                 if entry.get_review_date() is None:
                     print(("File %r is missing a review date" % entry.filename),
                           file=sys.stderr)
 
-                print('Updating', filename)
+                print('Updating', path)
                 entry.save()
             finally:
                 rst_input.close()
+
+
+def main():
+    for dir, dirs, filenames in os.walk('.'):
+        if '.git' in dirs:
+            dirs.remove('.git')
+        update_directory(dir)
+
 
 if __name__ == '__main__':
     main()

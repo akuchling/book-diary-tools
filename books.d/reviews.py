@@ -1,19 +1,13 @@
 
 import os, re, pickle, string, time
 import cgi, getpass
-import xmlrpc.client
 import rst_html
 
 # Filename for the pickled indexes
 HOME_DIR = os.environ['HOME']
 
 # Directory holding the review source files
-SRC_DIR = os.path.join(HOME_DIR, 'files/books/s/')
-
-# Configuration for the posting mechanism
-XMLRPC_SERVER = 'http://books.amk.ca/xmlrpc.php'
-WEBLOG_NAME = 'Books'
-WEBLOG_USER = 'amk'
+SRC_DIR = os.path.join(HOME_DIR, 'Dropbox', 'home', 'text', 'books')
 
 
 abbrevs = { 'A': 'Author',
@@ -46,22 +40,18 @@ preferred_order = ['@', 'T', 'S', 'A', 'R', 'J', 'V',
                    'U', 'K', 'W', '*']
 
 
-def as_unicode (S):
-    """Return a Unicode string, decoding assuming Latin-1 encoding."""
-    return S.decode('latin-1')
-
-
 class BibEntry:
+    # List of fields that can be supplied multiple times in one entry.
     multiple = ['A', 'E', 'F', 'Q']
 
-    def __init__ (self, filename):
-        self.filename = filename
-        self.full_path = os.path.join(os.getcwd(), filename)
+    def __init__ (self, path):
+        self.filename = os.path.basename(path)
+        self.full_path = path
         self.fields = {}
         self.field_text = None
         self.body = None
         self.review_date = None
-        self.post_id = self.permalink = None
+        self.post_id = None
         self.updated = False
 
     def save (self):
@@ -115,20 +105,57 @@ class BibEntry:
             self.review_date = self.review_date.strip()
         self.updated = True
 
-    def link (self):
-        "Return a link to the review; used by books_best."
-        url = self.get_url()
-        title = cgi.escape(self.fields['T'])
-        if self.fields.get('V'):
-            title += ' (vol. %s)' % self.fields['V']
-
-        link = '<a href="%s">%s</a>' % (url, title)
-        if self.fields.get('S'):
-            link += ': ' + cgi.escape(self.fields['S'])
-        return link
-
     def get_url (self):
-        return 'http://books.amk.ca/%s' % self.filename
+        return 'http://books.amk.ca' + self.get_url_path()
+
+    def get_url_path (self):
+        y, m, d = self.get_review_date()
+        return '/%04i/%02i/%s.html' % (y, m, self.filename)
+
+    def get_tags (self):
+        return self.fields.get('K', [])
+
+    def get_sorting_title(self):
+        stopwords = set(('the', 'a'))
+        t = self.fields.get('T', '')
+        t = t.lower()
+        volume = self.fields.get('V')
+        words = [word for word in t.split()
+                 if word not in stopwords]
+        if volume:
+            words.append(str(volume).lower())
+        return ' '.join(words)
+
+    def get_authors (self):
+        L = []
+        e = cgi.escape
+        g = self.fields.get
+        for author_name in sorted(self.fields.get('A', [])):
+            author = author_name
+            author_url = self.fields.get('W')
+            if author_url:
+                author = '<a href="%s">%s</a>' % (e(author_url), e(author))
+            realname = self.fields.get('R')
+            if realname:
+                author += ' (%s)' % e(realname)
+            L.append(author)
+
+        authors = '; '.join(L)
+
+        editors = self.fields.get('E', [])
+        if editors:
+            if authors:
+                authors += '; '
+            authors += ('Ed. ' + ('; '.join(sorted(editors))))
+
+        illustrators = self.fields.get('Q', [])
+        if illustrators:
+            if authors:
+                authors += '; '
+            authors += ('Illustrated by: ' + ('; '.join(sorted(illustrators))))
+
+        return authors
+
 
     def get_isbn (self):
         g = self.fields.get('G')
@@ -144,17 +171,15 @@ class BibEntry:
             return None
 
     def as_html (self):
-        s = ''
-        if not self.body.startswith('<p>'):
-            s += '<p>'
-        s += self.body
+        s = self.body
+        if not s.startswith('<p>'):
+            s = '<p>' + s
         return s
 
     def index (self):
         "Add this entry to the indexes"
 
         review_i[self.filename] = self
-        post_i[self.filename] = (self.post_id, self.permalink)
         t = make_title(self.fields['T'])
         L = title_i.setdefault(t, [])
         L.append(self.filename)
@@ -169,11 +194,14 @@ class BibEntry:
             L = author_i.setdefault(a, [])
             L.append(self.filename)
 
-    def get_full_title (self):
+    def get_full_title (self, include_subtitle=True):
         title = self.fields['T']
-        subtitle = self.fields.get('S')
-        if subtitle:
-            title += ': ' + subtitle
+        if include_subtitle:
+            subtitle = self.fields.get('S')
+            if subtitle:
+                title += ': ' + subtitle
+        if self.fields.get('V'):
+            title += ' (vol. %s)' % self.fields['V']
         return title
 
     def get_review_date (self):
@@ -195,18 +223,6 @@ class BibEntry:
             L.append('<a href="%s" class="url">Web site</a>' % (g('U')))
         if g('V') and not g('J'):
             L.append(' (Vol. %s)' % g('V'))
-
-        for author in g('A', []):
-            author = e(author)
-            if g('W'):
-                author = '<a href="%s">%s</a>' % (e(g('W')), author)
-            if g('R'):
-                author += ' (%s)' % e(g('R'))
-            L.append(author)
-
-        editors = g('E', [])
-        if editors:
-            L.append('Ed. ' + ('; '.join(editors)))
 
         if g('L'):
             translator = g('F', [])
@@ -277,7 +293,7 @@ class BibEntry:
                     'comics']
     def is_fiction (self):
         "Returns true if this book is fiction."
-        keywords = self.fields.get('K', [])
+        keywords = self.get_tags()
         if 'reference' in keywords:
             return False
 
@@ -289,60 +305,16 @@ class BibEntry:
 
         return False
 
-    def delete_post(self):
-        "Delete the post from the weblog."
-        assert self.post_id is not None
-        wp = _get_xmlrpc_server()
-        password = _get_wp_password()
-        deleted = wp.blogger.deletePost(WEBLOG_NAME, self.post_id,
-                                        WEBLOG_USER, password,
-                                        False)
-        self.post_id = self.permalink = None
-        self.updated = False
-        post_i[self.filename] = (None, None)
-
-    def update_post(self):
-        wp = _get_xmlrpc_server()
-        password = _get_wp_password()
-        print('Updating post', self.filename)
-        fields = list(self.fields.get('K'))
-        if 'comics' in fields:
-            fields.remove('comics')
-            cat_list = ['comics']
-        else:
-            cat_list = ['books']
-
-        descr = self.get_html_header() + '\n' + self.as_html().replace('\n', ' ')
-        
-        content = {'title': as_unicode(self.get_full_title()),
-                   'description': as_unicode(descr),
-                   'mt_keywords': self.fields.get('K'),
-                   'dateCreated': xmlrpc.client.DateTime(
-                       '%04i%02i%02iT12:00:00' % self.get_review_date()),
-                   'categories': cat_list,
-                   'post_status': 'publish',
-                  }
-        if self.post_id is None:
-            content['wp_slug'] = self.filename
-            self.post_id = wp.metaWeblog.newPost(
-                WEBLOG_NAME, WEBLOG_USER, password, content, True)
-        else:
-            wp.metaWeblog.editPost(
-                self.post_id, WEBLOG_USER, password, content, True)
-
-        self.updated = False
 
 #
 # Define indexes
 #
 # review_i:   f_name -> BibEntry
-# post_i:     f_name -> (post_id, permalink)
 # title_i:    title -> [f_name]
 # subject_i:  subject -> [f_name]
 # author_i:   author -> [f_name]
 
 review_i = {}
-post_i = {}
 subject_i = {}
 title_i = {}
 author_i = {}
@@ -357,7 +329,7 @@ def scan_pickles ():
 
 def load ():
     "Load indexes for the book review databases"
-    for d in review_i, post_i, subject_i, title_i, author_i:
+    for d in review_i, subject_i, title_i, author_i:
         d.clear()
     for f in scan_pickles():
         input = open(f, 'rb')
@@ -420,67 +392,3 @@ def get_pickle_filename (filename):
     dir = os.path.dirname(filename)
     filename = os.path.basename(filename)
     return os.path.join(dir, '.'+filename + '.pkl')
-
-#
-# Weblog API functions
-#
-
-def _get_xmlrpc_server():
-    s = xmlrpc.client.ServerProxy(XMLRPC_SERVER, verbose=0)
-    return s
-
-_password = None
-def _get_wp_password():
-    global _password
-
-    if _password is None:
-        _password = getpass.getpass('WordPress password? ')
-    return _password
-
-def delete_all_posts():
-    """Lists all posts to the weblog and deletes them.
-    """
-    for review in list(review_i.values()):
-        if review.post_id is None:
-            continue
-        review.delete_post()
-        review.save()
-
-def add_new_posts():
-    """Look for reviews that need to be posted or updated.
-    """
-    for review in list(review_i.values()):
-        ##print review.post_id, review.updated
-        if not (review.post_id is None or review.updated):
-            continue
-
-        review.update_post()
-        review.save()
-
-def reset_weblog():
-    "Delete all weblog posts, except for those in the 'Commentary' category."
-    wp = _get_xmlrpc_server()
-    password = _get_wp_password()
-    chunk = 100
-    to_skip = set()
-    while True:
-        posts = wp.metaWeblog.getRecentPosts(WEBLOG_NAME, WEBLOG_USER,
-                                             password, chunk)
-        posts = [p for p in posts
-                 if p['postid'] not in to_skip]
-        if len(posts) == 0:
-            break
-        print('Deleting', len(posts), 'posts')
-        for p in posts:
-            # Skip hand-written posts in the 'Commentary' categories.
-            if 'Commentary' in p['categories']:
-                to_skip.add(p['postid'])
-                continue
-                            
-            deleted = wp.blogger.deletePost(WEBLOG_NAME, p['postid'],
-                                            WEBLOG_USER, password, 
-                                            False)
-            
-    for f in scan_pickles():
-        os.unlink(f)
-

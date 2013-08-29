@@ -1,0 +1,259 @@
+#!/usr/bin/env python3
+# -*-Python-*-
+#
+# Description: Writes a tree of HTML output.
+#
+
+import os, shutil, string
+import urllib.parse
+import collections
+
+from mako.template import Template
+
+import reviews
+
+OUTPUT_DIR = '/tmp/output'
+
+ENTRY_TEMPLATE = Template("""
+%if book_url:
+  <p>Book web site: <a href="${book_url}" class="url">${book_url}</a></p>
+%endif
+
+<p>
+${author}<br />
+%if publisher or date_pub:
+  %if publisher:
+    ${publisher}
+  %endif
+  %if date_pub:
+    ${date_pub}
+  %endif
+  <br />
+%endif
+%if isbn:
+  ${isbn} <br />
+%endif
+%if pages:
+  ${pages} <br />
+%endif
+Date finished: ${date_read} <br />
+</p>
+
+${text}
+
+<p>Tagged:
+%for tag in sorted(tags):
+  <a href="/tag/${tag.replace(' ', '_')|u}/">${tag}</a>${',' if not loop.last else ''}
+%endfor
+</p>
+<p>Permalink: <a href="${url}">http://books.amk.ca${url}</a></p>
+
+<div class="panel-group" id="accordion" style="margin: 1em">
+  <div class="panel panel-default">
+    <div class="panel-heading">
+      <h4 class="panel-title">
+        <a class="accordion-toggle" data-toggle="collapse" data-parent="#accordion" href="#collapseOne">
+          Full record
+        </a>
+      </h4>
+    </div>
+    <div id="collapseOne" class="panel-collapse collapse">
+      <div class="panel-body"><p><pre>${review.field_text}</pre></p></div>
+    </div>
+  </div>
+</div>
+""")
+
+INDEX_TEMPLATE = Template("""
+<h3>The ten most recent books</h3>
+<ul>
+%for rev in reviews:
+  <li> ${rev}
+%endfor
+</ul>
+
+<h3>Tags</h3>
+<p>
+<%
+ last_tag = None
+ %>
+%for tag_url, tag in tag_list:
+  %if last_tag is not None and last_tag[0] != tag[0]:
+    /
+  %endif
+  <a style="padding-left: 0.35em ; padding-right: 0.35em" href="${tag_url}">${tag.replace(' ', '&nbsp;')}</a>
+  <%
+   last_tag = tag
+   %>
+%endfor
+</p>
+""")
+
+LIST_TEMPLATE = Template("""
+<ul>
+%for rev in reviews:
+  <li> ${rev}
+%endfor
+</ul>
+""")
+
+PAGE_TEMPLATE = Template("""<!DOCTYPE html>
+<html>
+<head>
+    <title>${title}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Bootstrap -->
+    <link href="/bootstrap/css/bootstrap.min.css" rel="stylesheet" media="screen">
+
+    <!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!--[if lt IE 9]>
+      <script src="/bootstrap/assets/js/html5shiv.js"></script>
+      <script src="/bootstrap/assets/js/respond.min.js"></script>
+    <![endif]-->
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="/bootstrap/jquery.js"></script>
+    <script src="/bootstrap/js/bootstrap.min.js"></script>
+
+    <style type="text/css">
+      cite {font-style: italic}
+    </style>
+</head>
+<body>
+  <div class="container">
+    <div class="span-24">
+      <h1>${title}</h1>
+      %if subtitle:
+        <h2>${subtitle}</h2>
+      %endif
+    </div>
+    <div class="span-20">
+      ${content}
+    </div>
+  </div>
+</body>
+</html>
+""")
+
+LINK_TMPL = Template("""<a href="${url|h}">${title|h}</a>${subtitle|h}""")
+
+
+def make_link(url, title, subtitle):
+    return LINK_TMPL.render(url=url, title=title, subtitle=subtitle)
+
+
+def make_review_link(review):
+    "Return a link to a review."
+    url = review.get_url_path()
+    title = review.get_full_title(include_subtitle=False)
+    if review.fields.get('S'):
+        subtitle = ": " + review.fields['S']
+    else:
+        subtitle = ""
+    return make_link(url, title, subtitle)
+
+
+def generate_review_html(review):
+    d = dict(review=review,
+             title=review.get_full_title(),
+             author=review.get_authors(),
+             publisher=review.fields.get('I'),
+             date_pub=review.fields.get('D'),
+             isbn=review.fields.get('G'),
+             pages=review.fields.get('P'),
+             date_read=review.fields.get('@'),
+             text=review.as_html(),
+             book_url=review.fields.get('U'),
+             url=review.get_url_path(),
+             tags=review.get_tags(),
+             )
+    entry = ENTRY_TEMPLATE.render(**d)
+    #print(repr(entry))
+    return entry
+
+
+def write_page(output_path, content,
+               title="Book Diary",
+               subtitle="A personal reading journal"):
+    path = os.path.join(OUTPUT_DIR, output_path)
+    dir = os.path.dirname(path)
+    if not os.path.exists(dir):
+        os.makedirs(dir)
+
+    page = PAGE_TEMPLATE.render(content=content,
+                                title=title, subtitle=subtitle)
+    ##print('Writing', path)
+    output = open(path, 'w')
+    output.write(page)
+    output.close()
+
+
+def write_html(output_dir):
+    # Write index page
+    print("Writing index page")
+    content = ''
+    review_list = [review for (rev_date, title, review)
+                   in reviews.sort_by_chron()]
+    rcron_list = review_list[:10]
+
+    tag_set = set()
+    for r in review_list:
+        tag_set.update(r.get_tags())
+    tag_list = [('/tag/{}/'.format(tag.replace(' ', '_')), tag)
+                for tag in sorted(tag_set)]
+    content = INDEX_TEMPLATE.render(
+        reviews=[make_review_link(r) for r in rcron_list],
+        tag_list=tag_list)
+    write_page('index.html', content)
+    # XXX implement a tag cloud or something
+
+    # Write individual review pages.
+    print("Writing reviews")
+    for review in review_list:
+        if not review.updated:
+            continue
+
+        title = review.get_full_title()
+        y, m, d = review.get_review_date()
+        fn = '%04i/%02i/%s.html' % (y, m, review.filename)
+        content = generate_review_html(review)
+        write_page(fn, content, title=title,
+                   subtitle='')
+
+        # Clear the .updated flag
+        review.updated = False
+        review.save()
+
+    # Write tag pages:
+    # /tag/<tagname>/index.html
+    print("Writing tag pages")
+    tags = collections.defaultdict(list)
+    for review in review_list:
+        for tag in review.get_tags():
+            tags[tag].append(review)
+
+    for tag, tagged_reviews in sorted(tags.items()):
+        tagged_reviews.sort(key=lambda r: r.get_sorting_title())
+        tagged_reviews = [make_review_link(review) for review in tagged_reviews]
+        quoted_tag = tag.replace(' ', '_')
+        path = 'tag/%s/index.html' % (urllib.parse.quote_plus(quoted_tag),)
+        content = LIST_TEMPLATE.render(reviews=tagged_reviews)
+        write_page(path, content, title="Book Diary:Tag:" + string.capwords(tag),
+                   subtitle=None)
+
+    # Copy CSS/image files
+    mod_path = os.path.dirname(os.path.join(os.getcwd(), reviews.__file__))
+    css_src_dir = os.path.join(mod_path, '..', 'bootstrap')
+    css_dest_dir = os.path.join(output_dir, 'bootstrap')
+    if not os.path.exists(css_dest_dir):
+        shutil.copytree(css_src_dir, css_dest_dir)
+
+
+if __name__ == '__main__':
+    reviews.load()
+    #if os.path.exists(OUTPUT_DIR):
+    #    shutil.rmtree(OUTPUT_DIR)
+    if not os.path.exists(OUTPUT_DIR):
+        os.makedirs(OUTPUT_DIR)
+
+    write_html(OUTPUT_DIR)

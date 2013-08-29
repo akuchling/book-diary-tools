@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*-Python-*-
-# 
+#
 # Contains the process_rst() function, which turns ReST files into
 # HTML output that can be included in a page.
 #
@@ -15,10 +15,10 @@ class WeblogWriter (html4css1.Writer):
         self.translator_class = WeblogHTMLTranslator
 
 class WeblogHTMLTranslator (html4css1.HTMLTranslator):
-    doctype = ""	
+    doctype = ""
     generator = "<!-- %s -->"
     content_type = "<!-- %s -->"
-	
+
     def __init__(self, document):
         super().__init__(document)
         self.head_prefix = []
@@ -26,17 +26,17 @@ class WeblogHTMLTranslator (html4css1.HTMLTranslator):
         self.stylesheet = []
         self.body_suffix = []
         self.section_level = 1
-        
+
     def visit_system_message(self, node):
         pass
 
     def visit_document (self, node):
         pass
-    
+
     def depart_document (self, node):
         pass
 
-                                            
+
 def process_rst (filename, body):
     "Parse 'body' as RST and convert it to HTML"
     output_file = io.StringIO()
@@ -49,8 +49,7 @@ def process_rst (filename, body):
         source=body,
         destination_path=filename,
         settings=None,
-	settings_overrides={'input_encoding':'utf-8', 
-                            'output_encoding':'iso-8859-1'})
+	settings_overrides={'input_encoding':'utf-8',
+                            'output_encoding':'unicode'})
 
     return body
-
