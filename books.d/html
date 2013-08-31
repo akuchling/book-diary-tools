@@ -62,6 +62,8 @@ ${text}
     </div>
   </div>
 </div>
+
+<p><small><a href="/">http://books.amk.ca</a></small></p>
 """)
 
 INDEX_TEMPLATE = Template("""
@@ -214,19 +216,21 @@ def write_html(output_dir):
     # Write individual review pages.
     print("Writing reviews")
     for review in review_list:
-        if not review.updated:
+        y, m, d = review.get_review_date()
+        fn = '%04i/%02i/%s.html' % (y, m, review.filename)
+        path = os.path.join(OUTPUT_DIR, fn)
+        if os.path.exists(path) and (not review.updated):
             continue
 
         title = review.get_full_title()
-        y, m, d = review.get_review_date()
-        fn = '%04i/%02i/%s.html' % (y, m, review.filename)
         content = generate_review_html(review)
         write_page(fn, content, title=title,
                    subtitle='')
 
         # Clear the .updated flag
-        review.updated = False
-        review.save()
+        if review.updated:
+            review.updated = False
+            review.save()
 
     # Write tag pages:
     # /tag/<tagname>/index.html
