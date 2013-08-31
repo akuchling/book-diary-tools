@@ -102,6 +102,9 @@ PAGE_TEMPLATE = Template("""<!DOCTYPE html>
 <head>
     <title>${title}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    %if noindex:
+      <meta name="robots" content="noindex">
+    %endif
     <!-- Bootstrap -->
     <link href="/bootstrap/css/bootstrap.min.css" rel="stylesheet" media="screen">
 
@@ -174,14 +177,15 @@ def generate_review_html(review):
 
 def write_page(output_path, content,
                title="Book Diary",
-               subtitle="A personal reading journal"):
+               subtitle="A personal reading journal", noindex=False):
     path = os.path.join(OUTPUT_DIR, output_path)
     dir = os.path.dirname(path)
     if not os.path.exists(dir):
         os.makedirs(dir)
 
     page = PAGE_TEMPLATE.render(content=content,
-                                title=title, subtitle=subtitle)
+                                title=title, subtitle=subtitle,
+                                noindex=noindex)
     ##print('Writing', path)
     output = open(path, 'w')
     output.write(page)
@@ -204,7 +208,7 @@ def write_html(output_dir):
     content = INDEX_TEMPLATE.render(
         reviews=[make_review_link(r) for r in rcron_list],
         tag_list=tag_list)
-    write_page('index.html', content)
+    write_page('index.html', content, noindex=True)
     # XXX implement a tag cloud or something
 
     # Write individual review pages.
@@ -239,7 +243,7 @@ def write_html(output_dir):
         path = 'tag/%s/index.html' % (urllib.parse.quote_plus(quoted_tag),)
         content = LIST_TEMPLATE.render(reviews=tagged_reviews)
         write_page(path, content, title="Book Diary:Tag:" + string.capwords(tag),
-                   subtitle=None)
+                   subtitle=None, noindex=True)
 
     # Copy CSS/image files
     mod_path = os.path.dirname(os.path.join(os.getcwd(), reviews.__file__))
