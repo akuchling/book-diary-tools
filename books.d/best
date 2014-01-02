@@ -16,13 +16,14 @@ def get_entry_html(entry):
         if len(L) == 2:
             a = L[1] + ' ' + L[0]
         return a
-    s = '<cite>' + entry.link() + '</cite>'
+    print(entry)
+    s = '<cite>' + entry.get_url() + '</cite>'
     if authors is not None:
         authors = [flip(a) for a in authors]
         s += ", " + (', '.join(authors))
 
     return s + ": "
-    
+
 
 if __name__ == '__main__':
     reviews.load()
