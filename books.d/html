@@ -134,6 +134,7 @@ PAGE_TEMPLATE = Template("""<!DOCTYPE html>
     </div>
     <div class="span-20">
       ${content}
+      <p><small><a href="http://www.amk.ca/contact">Contact me</a></small></p>
     </div>
   </div>
 </body>
