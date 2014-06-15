@@ -199,8 +199,7 @@ def write_html(output_dir):
     # Write index page
     print("Writing index page")
     content = ''
-    review_list = [review for (rev_date, title, review)
-                   in reviews.sort_by_chron()]
+    review_list = reviews.sort_by_chron()
     rcron_list = review_list[:10]
 
     tag_set = set()

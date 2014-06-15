@@ -383,9 +383,8 @@ def sort_by_title (L):
 
 def sort_by_chron ():
     L = list(review_i.values())
-    L = [(r.review_date, remove_stopwords(r.fields['T']).lower(), r)
-         for r in L]
-    L.sort() ; L.reverse()
+    L.sort(key=lambda r: (r.review_date, remove_stopwords(r.fields['T']).lower()))
+    L.reverse()
     return L
 
 def get_pickle_filename (filename):

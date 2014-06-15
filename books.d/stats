@@ -26,7 +26,7 @@ if __name__ == '__main__':
 
     years = collections.defaultdict(list)
 
-    for rev_date, title, entry in reviews.sort_by_chron():
+    for entry in reviews.sort_by_chron():
         if entry.review_date is None:
             print(('Entry for %s lacks a reading date' % entry.fields.get('T')),
                   file=sys.stderr)
