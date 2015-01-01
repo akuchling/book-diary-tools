@@ -16,7 +16,8 @@ def get_entry_html(entry):
         if len(L) == 2:
             a = L[1] + ' ' + L[0]
         return a
-    s = '<cite>' + entry.get_url() + '</cite>'
+    s = '<li><cite><a href="{0}">{1}</a></cite>'.format(entry.get_url(),
+                                                    entry.get_full_title())
     if authors is not None:
         authors = [flip(a) for a in authors]
         s += ", " + (', '.join(authors))
